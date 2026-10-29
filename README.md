@@ -1,5 +1,5 @@
 # PiXWheat
-Explainable AI for Predicting Wheat Development Using Process-Informed Predictors
+**P**rocess-**i**nformed predictors and **X**AI for **Wheat** development
 
 Code accompanying the manuscript **“Explainable Artificial Intelligence for Predicting Wheat Phenological Development Across Multi-Environment Agricultural Datasets”** by Joel Milek, Luca Bernardini, Lukas J. Koppensteiner, Andreas Holzinger and Eva M. Molin.
 
