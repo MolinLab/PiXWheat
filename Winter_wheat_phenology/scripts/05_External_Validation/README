@@ -1,0 +1,32 @@
+# 05_External_Validation
+
+These scripts construct BRIWECS environment-level milestone targets and assess a development-data-trained XGBoost model on independent trials. Run them from the repository root or set `PHENOLOGY_PROJECT_DIR` to its absolute path. The main outcome is BBCH prediction on each supplied milestone date; milestone-date error from the predicted daily trajectory is assessed separately.
+
+## Scripts and order
+
+| Script | Role | Main output |
+| --- | --- | --- |
+| `calculate_briwecs_environment_targets_paper_style.R` | Construct reference-treatment targets for BBCH10, BBCH59 and BBCH87. Average cultivar BLUEs with equal weight after accounting for field row and column; use equal-weight observed cultivar means if the mixed model cannot be fitted. | `external_validation/briwecs_environment_targets/briwecs_environment_milestone_targets_paper_style.csv` |
+| `Validate_XGBoost_Briwecs.R` | Reconstruct the German–Austrian development cohort, load a compatible development-only model cache or explicitly refit it, build daily BRIWECS predictors and evaluate stage and milestone-date errors. Also run a two-predictor GAM interaction comparison. | `external_validation/<BRIWECS run ID>/` |
+
+Run the scripts in this order:
+
+```bash
+Rscript Scripts/05_External_Validation/calculate_briwecs_environment_targets_paper_style.R
+Rscript Scripts/05_External_Validation/Validate_XGBoost_Briwecs.R
+```
+
+## Inputs
+
+The target script reads `Data/BRIWECS/BRIWECS_data_publication.csv` by default. The validation script also requires `Data/BRIWECS/BRIWECS_location_coordinates.csv`, HYRAS site weather in `Data/BRIWECS/`, ERA5-Land site-day files in `Data/Era5/era5land_yearly_BRIWECS/temp_extract/`, and a compatible soil hydraulic table. It first tries `Data/BRIWECS/BRIWECS_soil_hydraulic.csv`, then `Data/Soil_hydraulic_ERA5_0_100.csv`. Required fields and acceptable input overrides are specified in the configuration blocks. The BRIWECS extraction scripts are in `Scripts/01_Preparation/BRIWECS/`.
+
+The validation script reads the selected transfer benchmark's `benchmark_configuration.rds`, `outer_fold_manifest.csv` and `outer_split_specs.csv` from `benchmark_results/<run ID>/`. It uses the input file recorded in that benchmark configuration if accessible, otherwise `Data/pheno_df_CV.csv`; the MD5 checksum must match. `PHENOLOGY_INPUT_FILE` provides a further path override.
+## Representation and model cache
+
+The supplied defaults select `hybrid` and the benchmark ID `multischeme_xgboost_paper_hybrid`. For the cumulative analysis, set `PHENOLOGY_BRIWECS_FEATURE_SET=cumulative` and point `PHENOLOGY_GENERALISATION_RUN_ID` to the matching cumulative benchmark (for example, `multischeme_xgboost_paper_cum_2`). Use a separate `PHENOLOGY_BRIWECS_RUN_ID` for each analysis. The script calculates both sets of daily predictors, but fits and evaluates only the selected representation in each run.
+
+Existing full-cohort XGBoost and GAM caches must have matching signatures. By default, a missing or incompatible XGBoost cache stops the run. To fit a new model using **German–Austrian development data only**, explicitly set `PHENOLOGY_BRIWECS_ALLOW_MODEL_REFIT=TRUE`. The independent GAM cache can be refitted with `PHENOLOGY_BRIWECS_ALLOW_GAM_REFIT=TRUE`. `PHENOLOGY_BRIWECS_MODEL_SOURCE_DIR` points to an existing compatible cache folder. BRIWECS outcomes are not used for model fitting or tuning.
+
+## Outputs and interpretation
+
+Key result files include `briwecs_environment_milestone_units.csv`, `briwecs_primary_macro_performance.csv`, `briwecs_cluster_bootstrap_performance.csv`, `briwecs_milestone_date_offset_summary.csv`, `interaction_ablation_performance_summary.csv`, source and predictor audits, fitted model caches, figures and `session_info.txt`. The primary stage error weights each available environment–milestone target equally; it does not weight plot or genotype records separately. The two-predictor GAM comparison tests a predictive interaction and does not establish a causal physiological effect.

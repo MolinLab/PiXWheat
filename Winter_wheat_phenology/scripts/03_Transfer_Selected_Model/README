@@ -1,0 +1,24 @@
+# 03_Transfer_Selected_Model
+
+`multischeme_generalisation_benchmark.R` evaluates the selected winter wheat BBCH model under five transfer schemes and compares it with a calibrated thermal-time baseline. It uses the cumulative-weather feature set selected in folder 02. This is an observed-date stage-prediction analysis: weather through each prediction date is observed, not forecast.
+
+## Inputs and execution
+
+The default input is `Data/pheno_df_CV.csv`, produced by `Scripts/01_Preparation/combine_DWD_AT.R`. The table must include BBCH, the eight predictors in the cumulative-weather representation, date, season year, coordinates, a physical-site identifier (`Standort` by default), a site-season environment ID and an environmental-zone label (`env_zone` by default). The script checks these fields before fitting.
+
+Run from the repository root:
+
+```bash
+Rscript Scripts/03_Transfer_Selected_Model/multischeme_generalisation_benchmark.R
+```
+
+Set `PHENOLOGY_PROJECT_DIR` to the repository path if running elsewhere. `PHENOLOGY_GENERALISATION_INPUT` overrides the input path. The default learner is XGBoost; `PHENOLOGY_GENERALISATION_LEARNER=random_forest` selects the alternative learner. `PHENOLOGY_GENERALISATION_SCHEMES` accepts a comma-separated subset of the five schemes. Use `PHENOLOGY_GENERALISATION_RUN_ID` to choose a result directory. Required R packages are listed in the script.
+
+## Evaluation and outputs
+
+The five schemes are spatial blocks, leave-one-year-out, expanding origin, environmental zones and joint space–time exclusion. Expanding-origin training contains only earlier years. The joint split excludes both the test spatial block and the test temporal block from training. Inner tuning is constructed within each outer training set, using a scheme-matched strategy where possible.
+
+The default result directory is `benchmark_results/multischeme_xgboost_cumulative_weather_paper/`. Important files include `outer_split_specs.csv`, `outer_fold_manifest.csv`, `outer_leakage_qc.csv`, `oof_predictions.csv`, `generalisation_performance_by_scheme.csv`, `selected_learner_vs_gdd_paired_bootstrap.csv`, `fold_model_specifications.rds`, `benchmark_configuration.rds` and `session_info.txt`. The fold specifications and predictions support subsequent out-of-fold TreeSHAP reconstruction. Checkpoint files permit a resumed run. Use a new run ID or checkpoint version if predictors, models, folds or tuning settings change.
+
+The primary performance measure is environment–observed-stage macro-RMSE, calculated as `sqrt(mean(environment_stage_MSE))`. Metrics are reported separately for each scheme.
+

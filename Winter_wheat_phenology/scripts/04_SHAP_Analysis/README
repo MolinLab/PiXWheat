@@ -1,0 +1,30 @@
+# 04_SHAP_Analysis
+
+`SHAP_XGBoost.R` reconstructs the XGBoost models fitted in the transfer benchmark and calculates TreeSHAP attributions on their held-out observations. It compares feature importance across schemes and stages, examines predictor dependence, and calculates pairwise TreeSHAP interactions on a balanced sample. Attributions describe the fitted model; they are not causal effects.
+
+## Inputs
+
+The script reads `benchmark_configuration.rds`, `outer_fold_manifest.csv`, `outer_split_specs.csv`, `oof_predictions.csv` and `fold_model_specifications.rds` from the folder 03 transfer run. Its default benchmark run ID is `multischeme_xgboost_paper_cum_2`, matching the supplied SHAP script. Set `PHENOLOGY_GENERALISATION_RUN_ID` or `PHENOLOGY_GENERALISATION_BENCHMARK_DIR` if your saved transfer results use a different directory. The script reads the predictor list and feature-set ID from that run's configuration, and requires the saved learner to be XGBoost.
+
+The script uses the input path recorded in the benchmark configuration when it exists. If that old path is unavailable, it tries `Data/pheno_df_CV.csv` under the repository root. `PHENOLOGY_INPUT_FILE` overrides this choice. In every case, its MD5 checksum must match the input recorded for the transfer run. The installed `mlr3`, `mlr3learners` and `xgboost` versions must also match those recorded by the benchmark, and reconstructed out-of-fold predictions must pass the script's numerical agreement check.
+
+## Run
+
+From the repository root, the default run covers spatial-block and expanding-origin folds:
+
+```bash
+Rscript Scripts/04_SHAP_Analysis/SHAP_XGBoost.R
+```
+
+To analyse all five schemes used in the manuscript, run:
+
+```bash
+PHENOLOGY_SHAP_SCHEMES=spatial_block,leave_one_year_out,expanding_origin,environmental_zone,joint_space_time \
+  Rscript Scripts/04_SHAP_Analysis/SHAP_XGBoost.R
+```
+
+Set `PHENOLOGY_PROJECT_DIR` when running outside the repository root. The default output directory is `shap_results/xgboost_generalisation_oof_treeshap_paper_cum_2/`; `PHENOLOGY_SHAP_RUN_ID` changes it. Run IDs should correspond to the transfer benchmark actually used. `PHENOLOGY_SHAP_RUN_INTERACTIONS=false` omits the computationally expensive interaction analysis. See the script's configuration section for sample sizes, worker counts, checkpoint settings and numerical tolerances.
+
+## Outputs and interpretation
+
+Key outputs include `global_shap_importance_macro_environment_stage.csv`, `shap_importance_by_exact_bbch.csv`, `shap_fold_stability.csv`, `oof_shap_values_wide.rds`, `shap_interaction_importance_all_pairs.csv`, `oof_shap_interactions_sample.rds`, figures under `plots/`, the analysis configuration and `session_info.txt`. Interactions are calculated for a capped, environment–stage-balanced sample rather than every held-out row. The output directories also contain fold diagnostics and input-support audits.

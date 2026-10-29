@@ -1,0 +1,34 @@
+# 02_Predictor_Representation_Learner_Comparison
+
+These scripts compare developmental-clock formulations, predictor representations and statistical learners for winter wheat BBCH prediction. Run them from the repository root, or set `PHENOLOGY_PROJECT_DIR` to its absolute path. They do not download data or construct the combined modelling table.
+
+## Input and outputs
+
+Both scripts read `Data/pheno_df_CV.csv` by default. 
+
+Outputs are written to separate run directories beneath `benchmark_results/`:
+
+| Script | Purpose | Default result directory |
+| --- | --- | --- |
+| `Predictor_Representation_benchmark.R` | Compare five developmental clocks with GAM, then five predictor representations with fixed GAM, MARS, random forest and XGBoost settings. | `benchmark_results/point4_hypothesis_benchmark_paper/` |
+| `Learner_selection_benchmark.R` | Select among GAM, MARS, random forest and XGBoost using cumulative weather; assess the process-plus-recent-weather representation as a sensitivity analysis. Tune applicable learners within site-grouped inner folds. | `benchmark_results/learner_selection_cumulative_hybrid_paper/` |
+
+Both scripts assess spatial-block and contiguous temporal-block holdouts. They write fold manifests, out-of-fold predictions, performance summaries, configuration files and `session_info.txt`; checkpoint files support resumed runs. The first script reports paired contrasts between predictor sets, and the second reports paired learner comparisons and tuning summaries.
+
+## Run order
+
+From the repository root:
+
+```bash
+Rscript Scripts/02_Predictor_Representation_Learner_Comparison/Predictor_Representation_benchmark.R
+Rscript Scripts/02_Predictor_Representation_Learner_Comparison/Learner_selection_benchmark.R
+```
+
+Alternatively, set `PHENOLOGY_PROJECT_DIR` when running from another directory. `PHENOLOGY_POINT4_INPUT` and `PHENOLOGY_LEARNER_INPUT` override the respective default input paths. `PHENOLOGY_POINT4_RUN_ID` and `PHENOLOGY_LEARNER_BENCHMARK_RUN_ID` override the result-directory names. Use a new run ID or checkpoint version if the input, folds, models or tuning settings change. Package dependencies are listed in each script; use the project's `renv` setup provided.
+
+## Interpretation and reproducibility
+
+The representation benchmark compares predictors on one complete-case cohort across all its candidate sets. The learner benchmark uses its own complete-case cohort and physical-site grouping column (`Standort` by default). Thus, the scripts need not retain exactly the same observations or construct identical spatial folds. Within each script, candidate models share the same outer assessment design. Check `cohort_flow.csv` and `outer_fold_manifest.csv` in each result directory before comparing their scores.
+
+The primary selection metric is environment–observed-stage macro-MAE. Macro-RMSE is calculated as `sqrt(mean(environment_stage_MSE))`, giving each environment–stage unit equal weight.
+These scripts do not implement the five-scheme generalisation benchmark, independent BRIWECS assessment or TreeSHAP analysis. Those are separate stages of the manuscript workflow.
