@@ -1,80 +1,90 @@
 # PiXWheat
 **P**rocess-**i**nformed predictors and **X**AI for **Wheat** development
 
-Code accompanying the manuscript **“Explainable Artificial Intelligence for Predicting Wheat Phenological Development Across Multi-Environment Agricultural Datasets”** by Joel Milek, Luca Bernardini, Lukas J. Koppensteiner, Andreas Holzinger and Eva M. Molin.
+# Explainable AI for winter wheat phenology
+
+Code accompanying the manuscript **“Explainable Artificial Intelligence for Predicting Wheat Phenological Development Across Multi-Environment Agricultural Datasets”** by Joel J. Milek, Luca G. Bernardini, Lukas J. Koppensteiner, Andreas Holzinger and Eva M. Molin.
 
 ## Study overview
 
-We predict the developmental stage of winter wheat on an **observation date**, expressed on the BBCH scale, from environmental information available up to that date. Phenological records from Germany and Austria are combined with weather and soil data. The analysis compares developmental-clock formulations, predictor representations and four statistical learners; evaluates transfer under five validation schemes; and examines the selected XGBoost model using out-of-fold TreeSHAP. Independent BRIWECS trials assess external stage and milestone-date accuracy.
+The study predicts the BBCH developmental stage of winter wheat on a supplied date using environmental information available up to that date. The German and Austrian development dataset comprises 251,828 observations from 45,631 site–season–sowing environments, 3,084 physical sites and 45 harvest years (1981–2025). Independent BRIWECS trials assess transfer to a different observation source and the accuracy of predicted milestone dates.
 
-The modelling dataset contains 251,828 observations from 45,631 site–season–sowing environments, 3,084 physical sites and 45 harvest years (1981–2025). The manuscript and its supplementary methods give the definitive inclusion rules, predictor definitions, validation design and results.
+The analyses compare developmental clocks, environmental predictor representations and four learners (GAM, MARS, random forest and XGBoost). The selected model is evaluated under five transfer schemes and examined with out-of-fold TreeSHAP. A targeted GAM comparison tests whether explicitly modelling the thermal time by radiation interaction improves prediction. The manuscript and supplementary methods define the study cohort, predictors, validation schemes and reported estimands.
 
-**Prediction task:** Given the date and environmental history up to that date, estimate BBCH stage. An accurate stage estimate on a supplied date does not necessarily imply an accurate estimate of the date when a BBCH milestone is first reached. The expanding-origin experiment restricts training to preceding seasons but uses *observed* weather through the prediction date; it is not a weather-forecast-driven operational forecast.
+The prediction task uses **observed weather through each prediction date**. Expanding-origin evaluation restricts model training to earlier seasons; it does not assess a weather-forecast-driven operational forecast. Predicting BBCH on a supplied date and predicting the first date on which a milestone is reached are separate evaluation tasks.
 
-## Data and predictors
+## Repository layout
 
-Phenological observations originate from the German Weather Service (DWD) annual crop reporter network, PEP725, Austrian AGES and WheatVIZ data. BRIWECS trials are used for independent assessment. Weather inputs include DWD HYRAS, GeoSphere Austria SPARTACUS and ERA5-Land; soil information includes SoilGrids and derived soil-water variables. 
+```text
+.
+├── README.md
+├── Scripts/
+│   ├── 01_Preparation/
+│   │   ├── DWD/
+│   │   ├── GeoSphere/
+│   │   ├── Era5/
+│   │   ├── SoilGrids/
+│   │   ├── BRIWECS/
+│   │   └── combine_DWD_AT.R
+│   ├── 02_Predictor_Representation_Learner_Comparison/
+│   ├── 03_Transfer_Selected_Model/
+│   ├── 04_SHAP_Analysis/
+│   └── 05_External_Validation/
+├── Data/                         # supplied and generated data
+├── benchmark_results/            # generated results from folders 02 and 03
+├── shap_results/                 # generated results from folder 04
+└── external_validation/          # generated results from folder 05
+```
 
-The main comparison uses two environmental representations:
+Each numbered script folder has its own README with its inputs, execution options and outputs. `Data/` and the three result directories represent the working layout; their contents depend on which data can be redistributed and which analyses have been run. The source-specific preparation scripts are in the `DWD`, `GeoSphere`, `Era5`, `SoilGrids` and `BRIWECS` subfolders of `01_Preparation`.
 
-- **Cumulative weather:** variables accumulated from sowing to the observation date, including beta-response thermal time, radiation and precipitation.
-- **Hybrid process and recent weather:** process-informed development variables together with recent weather summaries.
+## Data and analysis workflow
 
-The process-informed variables adapt published temperature, photoperiod, vernalisation and water-response functions. They are predictors, **not outputs of a fully calibrated crop simulation model**. No cultivar identity is included as an explicit model input.
+Development observations come from the German Weather Service (DWD), PEP725, AGES and WheatVIZ. Weather inputs include DWD HYRAS, GeoSphere Austria SPARTACUS and ERA5-Land; soil information includes SoilGrids-derived inputs. BRIWECS trial records are used only for the independent assessment. Consult the manuscript and the folder READMEs for source versions, filters, preparation steps and attribution.
 
-## Analysis scripts
-
-The filenames below are those used in the study workflow. Place the scripts in `scripts/`, or adjust the example commands to match the final repository layout.
-
-| Stage | Script | Role |
+| Folder | Main scripts | Purpose |
 | --- | --- | --- |
-| Phenology quality control | `phenological_qc_at.R` and source-specific preparation scripts | Harmonise and check source observations. |
-| Daily predictors | `calc_cumGDD_ger_point3_corrected.R`, `calc_cumGDD_austria_point3_corrected.R` | Build weather and process-informed predictors for Germany and Austria. |
-| Combined modelling data | `combine_DWD_AT.R` | Combine source-specific prepared tables. |
-| Development-clock and feature comparison | `benchmark_features_point4_hypotheses.R` | Compare clock formulations and predictor representations under spatial and temporal blocks. |
-| Learner selection | `benchmark_learner_selection.R` | Compare GAM, MARS, random forest and XGBoost on the selected representations, with training-fold tuning as applicable. |
-| Transfer assessment | `multischeme_generalisation_benchmark.R` | Evaluate the frozen cumulative representation and selected learner against a calibrated thermal-time baseline under five transfer schemes. |
-| Model explanation | `shap_xgboost_phenology.R` | Reconstruct fold models, verify held-out predictions and calculate TreeSHAP values and interactions. |
-| Independent trials | `validate_xgboost_briwecs.R` | Refit using development data and evaluate BRIWECS stage and milestone-date predictions. |
-| Figures | `plot_point4_and_learner_selection.R`, `plot_generalisation_benchmark.R` | Render comparison and transfer figures from saved results. |
+| `01_Preparation` | Source-specific scripts and `combine_DWD_AT.R` | Harmonise observations, extract weather and soil inputs, calculate predictors and create `Data/pheno_df_CV.csv`. |
+| `02_Predictor_Representation_Learner_Comparison` | `Predictor_Representation_benchmark.R`, `Learner_selection_benchmark.R` | Compare developmental clocks, predictor representations and learners. |
+| `03_Transfer_Selected_Model` | `multischeme_generalisation_benchmark.R` | Compare the selected learner with a calibrated thermal-time baseline across five transfer schemes. |
+| `04_SHAP_Analysis` | `SHAP_XGBoost.R` | Reconstruct held-out XGBoost predictions and calculate TreeSHAP attributions and interactions. |
+| `05_External_Validation` | `calculate_briwecs_environment_targets_paper_style.R`, `Validate_XGBoost_Briwecs.R` | Construct independent environment-level targets and evaluate stage and milestone-date predictions; run the targeted GAM interaction comparison. |
 
-Some preprocessing scripts have source-specific paths and settings. Read each script's **USER CONFIGURATION** block before running it. 
+The main representation contains cumulative weather predictors from sowing to the observation date. A second representation combines process-informed variables with recent weather summaries. These predictors incorporate crop-modelling response functions, but they are not outputs of a fully calibrated crop simulation model. The transfer script supplied selects the cumulative representation; the external-validation script can evaluate cumulative or hybrid predictors when the corresponding transfer configuration and model cache are available.
 
-## Running the core analyses
+## Running the analyses
 
-The modelling scripts are R scripts intended to run from the command line. They require the prepared input tables and the packages listed in their `required_packages` declarations. Principal packages include `data.table`, `mlr3`, `mlr3learners`, `mlr3tuning`, `mlr3mbo`, `mgcv`, `earth`, `ranger`, `xgboost`, `sf` and `blockCV`. 
-
-On Linux or macOS, set `PHENOLOGY_PROJECT_DIR` to the directory containing the prepared data and run the stages in order:
+Run the scripts from the repository root with R and the packages specified in each script. Set `PHENOLOGY_PROJECT_DIR` to an absolute repository path when running from elsewhere. Prepare or place the required source data under `Data/` as described in `Scripts/01_Preparation/README.md`, then produce `Data/pheno_df_CV.csv` with `combine_DWD_AT.R`. The analytical stages can then be invoked as follows:
 
 ```bash
-export PHENOLOGY_PROJECT_DIR=/path/to/phenology-project
+Rscript Scripts/02_Predictor_Representation_Learner_Comparison/Predictor_Representation_benchmark.R
+Rscript Scripts/02_Predictor_Representation_Learner_Comparison/Learner_selection_benchmark.R
+Rscript Scripts/03_Transfer_Selected_Model/multischeme_generalisation_benchmark.R
 
-Rscript scripts/benchmark_features_point4_hypotheses.R
-Rscript scripts/benchmark_learner_selection.R
-Rscript scripts/multischeme_generalisation_benchmark.R
-Rscript scripts/shap_xgboost_phenology.R
-Rscript scripts/validate_xgboost_briwecs.R
+PHENOLOGY_GENERALISATION_RUN_ID=multischeme_xgboost_cumulative_weather_paper \
+  Rscript Scripts/04_SHAP_Analysis/SHAP_XGBoost.R
+
+Rscript Scripts/05_External_Validation/calculate_briwecs_environment_targets_paper_style.R
+PHENOLOGY_GENERALISATION_RUN_ID=multischeme_xgboost_cumulative_weather_paper \
+PHENOLOGY_BRIWECS_FEATURE_SET=cumulative \
+  Rscript Scripts/05_External_Validation/Validate_XGBoost_Briwecs.R
 ```
 
-To calculate TreeSHAP for all five transfer schemes rather than the script's default subset:
+The transfer benchmark writes to `benchmark_results/<run ID>/`; SHAP and external validation must reference the **same saved benchmark run** and its development input. The SHAP script's original default run ID differs from the transfer script's current default, so the example sets it explicitly. The SHAP script calculates only spatial-block and expanding-origin attributions by default; set `PHENOLOGY_SHAP_SCHEMES=spatial_block,leave_one_year_out,expanding_origin,environmental_zone,joint_space_time` to request all five schemes.
 
-```bash
-export PHENOLOGY_SHAP_SCHEMES=spatial_block,leave_one_year_out,expanding_origin,environmental_zone,joint_space_time
-Rscript scripts/shap_xgboost_phenology.R
-```
+External validation requires its BRIWECS inputs and a compatible development-only model cache; if that cache is unavailable, set `PHENOLOGY_BRIWECS_ALLOW_MODEL_REFIT=TRUE` to refit from development data. 
+Change run IDs when inputs, predictors or model specifications change so checkpoints are not reused across different experiments.
 
-The explanation stage requires the transfer benchmark's saved fold manifest, model specifications and out-of-fold predictions. It checks that reconstructed fold predictions match the stored predictions before accepting SHAP values. Set run IDs or result directories consistently if you change the defaults.
+## Validation and interpretation
 
-## Validation and metrics
+Spatial blocks, environmental-zone exclusion, leave-one-year-out, expanding origin and joint space–time exclusion assess distinct transfer settings. In particular, leave-one-year-out can use both earlier and later years for training, whereas expanding origin uses only earlier years.
 
-The five transfer schemes answer different questions: spatial blocks hold out new locations; leave-one-year-out holds out a season while allowing earlier and later seasons in training; expanding-origin uses only preceding seasons; environmental-zone validation holds out a zone; and joint space–time validation excludes both the test spatial block and temporal block from training. 
+Overall MAE and RMSE weight observations equally. Environment–observed-stage macro metrics weight each environment–stage unit equally; the macro-RMSE used in the analysis is `sqrt(mean(environment_stage_MSE))`. Independent BRIWECS assessment additionally reports errors for the dates at which BBCH milestones are first predicted to occur. TreeSHAP values describe attribution within the fitted model, not causal effects of individual environmental variables.
 
-Performance is reported in BBCH units. Overall MAE and RMSE weight observations equally. Environment–observed-stage macro-MAE gives each environment–stage unit equal weight. 
+## Reproducibility, data access and citation
 
-See the supplementary methods for the exact estimands, clustering and uncertainty calculations. BRIWECS analyses additionally report milestone-date errors in days.
+The scripts save configurations, fold definitions, out-of-fold predictions, performance tables and session information in run-specific result folders. Use the matching cohort file, benchmark run ID and package versions when reconstructing a manuscript result. The targeted GAM comparison is implemented in `Validate_XGBoost_Briwecs.R`; its external evaluation uses the independent BRIWECS targets.
 
-## Reproducibility and citation
+Citation: #########
 
-The transfer script writes fold specifications, out-of-fold predictions, performance tables, a run configuration and `session_info.txt` to a run-specific directory under `benchmark_results/`.
-
-**Citation:** Milek, J., Bernardini, L., Koppensteiner, L. J., Holzinger, A. & Molin, E. M. *Explainable Artificial Intelligence for Predicting Wheat Phenological Development Across Multi-Environment Agricultural Datasets*.
+**Manuscript:** Milek, J. J., Bernardini, L. G., Koppensteiner, L. J., Holzinger, A. & Molin, E. M. *Explainable Artificial Intelligence for Predicting Wheat Phenological Development Across Multi-Environment Agricultural Datasets*.
